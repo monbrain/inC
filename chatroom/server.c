@@ -7,7 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-// #include <unistd.h>
+#include <unistd.h>
 #include <errno.h>
 // #include <string.h>
 // #include <pthread.h>
@@ -15,6 +15,18 @@
 
 #define MAX_CLIENTS 100
 #define BUFFER_SZ 2048
+
+static _Atomic unsigned int cli_count = 0;
+static int uid = 10;
+
+
+void print_client_addr(struct sockaddr_in addr){
+    printf("%d.%d.%d.%d",
+        addr.sin_addr.s_addr & 0xff,
+        (addr.sin_addr.s_addr & 0xff00) >> 8,
+        (addr.sin_addr.s_addr & 0xff0000) >> 16,
+        (addr.sin_addr.s_addr & 0xff000000) >> 24);
+}
 
 
 int main(int argc, char **argv) {
@@ -60,6 +72,20 @@ int main(int argc, char **argv) {
     }
 
     printf("=== WELCOME TO THE CHATROOM ===\n");
+
+	while(1) {
+		socklen_t clilen = sizeof(cli_addr);
+		connfd = accept(listenfd, (struct sockaddr*)&cli_addr, &clilen);
+
+		// Check if max clients is reached
+		if((cli_count + 1) == MAX_CLIENTS) {
+			printf("Max clients reached. Rejected: ");
+			print_client_addr(cli_addr);
+			printf(":%d\n", cli_addr.sin_port);
+			close(connfd);
+			continue;
+		}
+	}
 
     return EXIT_SUCCESS;
 }
